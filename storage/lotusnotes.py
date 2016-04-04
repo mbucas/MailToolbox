@@ -8,7 +8,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 import win32com.client
-import tempfile #required for dealing with attachment
+# required for dealing with attachment
+import tempfile
 
 from abstractmailstorage import *
 
@@ -71,18 +72,16 @@ class LotusNotesMailbox(Mailbox):
         # TODO : Remove it only if it's present
         return ','.join([
             pair[0].split('/')[0][3:]
-            + ' <' 
-            + pair[1]
-            + '>'            
+            + ' <' + pair[1] + '>'
             for pair in pairs
         ])
-        
+
     def attachmentsExist(self, doc):
         for item in doc.Items:
             if item.Name == '$FILE':
                 return True
         return False
-            
+
     def addAttachment(self, message, doc, item):
         dtemp = tempfile.mkdtemp()
         tempAttach = os.path.join(dtemp, 'tempAttach')
@@ -103,12 +102,12 @@ class LotusNotesMailbox(Mailbox):
         message.attach(attachment)
         os.remove(tempAttach)
         os.rmdir(dtemp)
-        
+
     def addAttachments(self, message, doc):
         for item in doc.Items:
             if item.Name == '$FILE':
                 self.addAttachment(message, doc, item)
-                
+
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
         doc = self.mailStorage.database.GetDocumentByID(key)
@@ -127,7 +126,7 @@ class LotusNotesMailbox(Mailbox):
 
         body = self.getValue(doc, 'Body') + items
         bodymessage = MIMEText(body, _charset=LotusNotesCharset)
-        
+
         if self.attachmentsExist(doc):
             message = MIMEMultipart(charset=LotusNotesCharset)
             message.set_charset(LotusNotesCharset)
@@ -135,7 +134,7 @@ class LotusNotesMailbox(Mailbox):
             self.addAttachments(message, doc)
         else:
             message = bodymessage
-            
+
         message['Subject'] = self.getValue(doc, 'Subject')
         message['From'] = self.getNameAndAdress(doc, 'From', 'INetFrom')
         message['To'] = self.getNameAndAdress(doc, 'SendTo', 'InetSendTo')

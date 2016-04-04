@@ -19,8 +19,11 @@ from engine import engine
 
 
 def showText(text):
-    print text
-        
+    try:
+        print text
+    except UnicodeEncodeError:
+        print text.encode('utf8')
+
 
 class DataDelegate(QtGui.QItemDelegate):
 
@@ -41,7 +44,7 @@ class DataDelegate(QtGui.QItemDelegate):
             return QtGui.QLineEdit(parent)
         elif propertyDesc['content'] == 'hidden':
             edit = QtGui.QLineEdit(parent)
-            # As the Treeview doesn't hide data, 
+            # As the Treeview doesn't hide data,
             # it's useless to hide it in the editor
             #~ edit.setEchoMode(QtGui.QLineEdit.Password)
             return edit
@@ -101,10 +104,10 @@ class MainWindow(QtGui.QMainWindow):
         self.ui.actionOpen.triggered.connect(self.openProject)
         self.ui.actionSave.triggered.connect(self.saveProject)
         self.ui.actionSave_as.triggered.connect(self.saveAsProject)
-        
+
         # Execute menu
         self.ui.actionRun.triggered.connect(self.runProject)
-        
+
         # Help menu
         self.ui.actionAbout.triggered.connect(self.about)
 
@@ -118,7 +121,7 @@ class MainWindow(QtGui.QMainWindow):
             QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"),
             self.onDataChanged
         )
-        
+
         # Set internal values
         self.appName = appName
         self.config = config
@@ -155,7 +158,7 @@ class MainWindow(QtGui.QMainWindow):
         model = self.ui.treeView.model()
         model.clear()
         model.setHorizontalHeaderLabels(("Property", "Value", "Description"))
-        
+
     def insertArrowWidget(self, layout, pos):
         arrowFrame = QtGui.QFrame()
         arrowFrame.setMinimumSize(120, 120)
@@ -225,12 +228,12 @@ class MainWindow(QtGui.QMainWindow):
     def deleteTransformationWidget(self, index):
         layout = self.scrollAreaWidgetContents.layout()
         # Arrow and insert button
-        item = layout.takeAt(index + 1)  
+        item = layout.takeAt(index + 1)
         item.widget().hide()
         item.widget().destroy()
-        
+
         # The transformation itself
-        item = layout.takeAt(index)  
+        item = layout.takeAt(index)
         item.widget().hide()
         item.widget().destroy()
 
@@ -251,10 +254,10 @@ class MainWindow(QtGui.QMainWindow):
         frame = self.sender().parentWidget()
         layout = self.scrollAreaWidgetContents.layout()
         index = layout.indexOf(frame)
-        
+
         self.deleteTransformationWidget(index)
         self.clearProperties()
-        
+
         # Project
         self.currentProject.changed = True
         removePosition = ((index + 1) / 2) - 1
@@ -277,9 +280,9 @@ class MainWindow(QtGui.QMainWindow):
         transformation = transformations.NoTransformation(
             objectName,
             properties={
-                'name': objectName, 
+                'name': objectName,
                 'transformationtype': "NoTransformation",
-                }
+            }
         )
         self.currentProject.transformations.insert(insertPosition, transformation)
 
@@ -288,7 +291,7 @@ class MainWindow(QtGui.QMainWindow):
 
     def addRow(self, model, name, value, description):
         items = []
-        
+
         for data in (name, value, description):
             it = QtGui.QStandardItem()
             it.setData(data, QtCore.Qt.DisplayRole)
@@ -314,7 +317,7 @@ class MainWindow(QtGui.QMainWindow):
             index1
             .model()
             .data(
-                index1, 
+                index1,
                 QtCore.Qt.EditRole
             )
         )
@@ -343,9 +346,9 @@ class MainWindow(QtGui.QMainWindow):
             )
             # Replace in the transformation list of the project
             self.currentProject.transformations = [
-                tr 
-                    if tr.instance != self.currentElementName
-                    else self.currentElement
+                tr
+                if tr.instance != self.currentElementName
+                else self.currentElement
                 for tr in self.currentProject.transformations
             ]
             self.currentElement.properties['transformationtype'] = value
@@ -369,7 +372,7 @@ class MainWindow(QtGui.QMainWindow):
                 val,
                 prop['desc']
             )
-        
+
     def showTransformationProperties(self):
         self.currentElementName = self.sender().objectName()
         for tr in self.currentProject.transformations:

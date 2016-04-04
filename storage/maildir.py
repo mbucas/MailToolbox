@@ -2,6 +2,7 @@
 # coding:utf8
 
 import os
+import sys
 from mailbox import Maildir
 
 from abstractmailstorage import *
@@ -62,20 +63,38 @@ class MaildirMailStorage(AbstractMailStorage):
             os.path.join(*folderName.split('/'))
         )
         if includingPath:
-            # TODO : create cur new tmp at each level
-            try:
-                os.makedirs(folderpath)
-            except WindowsError:
-                # TODO : Ignore only WindowsError: [Error 183] Impossible de creer un fichier deja existant
-                pass
+            if sys.platform == 'win32':
+                # TODO : create cur new tmp at each level
+                try:
+                    os.makedirs(folderpath)
+                except WindowsError:
+                    # TODO : Ignore only WindowsError:
+                    # [Error 183] Impossible de creer un fichier deja existant
+                    pass
+            else:
+                try:
+                    os.makedirs(folderpath)
+                except OSError:
+                    # TODO : Ignore only OSError:
+                    # [Errno 17] Le fichier existe
+                    pass
         else:
             os.mkdir(folderpath)
         for subdir in ('cur', 'new', 'tmp'):
-            try:
-                os.mkdir(os.path.join(folderpath, subdir))
-            except WindowsError:
-                # TODO : Ignore only WindowsError: [Error 183] Impossible de creer un fichier deja existant
-                pass
+            if sys.platform == 'win32':
+                try:
+                    os.mkdir(os.path.join(folderpath, subdir))
+                except WindowsError:
+                    # TODO : Ignore only WindowsError:
+                    # [Error 183] Impossible de creer un fichier deja existant
+                    pass
+            else:
+                try:
+                    os.mkdir(os.path.join(folderpath, subdir))
+                except OSError:
+                    # TODO : Ignore only OSError:
+                    # [Errno 17] Le fichier existe
+                    pass
 
         # Force new read of folders list
         self.readFolders()

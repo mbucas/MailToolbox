@@ -37,20 +37,20 @@ class Project(object):
             self.source = source
         else:
             self.source = storage.NoMailStorage({
-                'name': "Source", 
+                'name': "Source",
                 'storagetype': "NoMailStorage",
-                'path' : "",
+                'path': "",
                 'action': "",
-                })
+            })
         if target:
             self.target = target
         else:
             self.target = storage.NoMailStorage({
-                'name': "Target", 
+                'name': "Target",
                 'storagetype': "NoMailStorage",
-                'path' : "",
+                'path': "",
                 'action': "add",
-                })
+            })
         if not transformations:
             self.transformations = []
         else:

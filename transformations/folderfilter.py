@@ -19,7 +19,7 @@ class FolderFilter(AbstractTransformation):
             'content': 'list',
             'desc': 'Filtering Method',
             # TODO : prepare translation : labels are used directly in the next function !
-            'values': ['Starts With', 'Ends With', 'Contains', 'Regular Expression',],
+            'values': ['Starts With', 'Ends With', 'Contains', 'Regular Expression', ],
         })
         self.expectedProperties.append({
             'key': 'folderValue',

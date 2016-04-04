@@ -17,9 +17,9 @@ class StatusChanger(AbstractTransformation):
             'content': 'list',
             'desc': 'Filtering Method',
             # TODO : prepare translation : labels are used directly in the next function !
-            'values': ['Force All Read', 'Force All Unread', 'Invert Status',],
+            'values': ['Force All Read', 'Force All Unread', 'Invert Status', ],
         })
-    
+
     def prepare_run(self):
         if self.properties["method"] == 'Force All Read':
             self.transform = transform_forceallread
