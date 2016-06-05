@@ -12,12 +12,19 @@ class DumpMailbox(Mailbox):
         Store all mails in a file, for tests purposes
         Ignores any reads
     """
-    def __init__(self, path, factory=None, create=True):
+    def __init__(self, path, factory=None, create=True, file=None):
         Mailbox.__init__(self, path, factory, create)
-        self.file = open(self._path, "wb")
+        self.file = file
 
     def add(self, message):
-        self.file.write(message)
+        if hasattr(message, "dump"):
+            self.file.write(message.dump)
+        else:
+            self.file.write(message.as_string())
+
+    def __len__(self):
+        """Return a count of messages in the mailbox."""
+        return 0
 
     def remove(self, key):
         pass
@@ -42,12 +49,18 @@ class DumpMailStorage(AbstractMailStorage):
         AbstractMailStorage.__init__(self, properties)
         self.mailbox = None
 
+    def openSession(self):
+        self.file = open(self.properties["path"], "wb")
+
+    def closeSession(self):
+        self.file.close()
+
     def getFolders(self):
         return ['/']
 
     def getFolderMailbox(self, folderName, create=True):
         if not self.mailbox:
-            self.mailbox = DumpMailbox(self.properties["path"], None, True)
+            self.mailbox = DumpMailbox(self.properties["path"], None, True, self.file)
         return self.mailbox
 
     def createFolder(self, folderName, includingPath=False):

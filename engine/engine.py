@@ -71,3 +71,6 @@ class Engine(object):
                         mailboxTarget.update(target_mail)
                     else:  # TODO Not the correct Exception type
                         raise NotImplementedError('Action unknown' + target_mail.action)
+
+        self.project.source.closeSession()
+        self.project.target.closeSession()

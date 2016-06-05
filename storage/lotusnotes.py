@@ -2,8 +2,9 @@
 # coding:utf8
 
 import os
+from time import time
 from mailbox import Mailbox
-from email import encoders
+from email import encoders, utils
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -51,8 +52,10 @@ class LotusNotesMailbox(Mailbox):
             val = val[0]
         if type(val) == unicode:
             return val.encode(LotusNotesCharset, errors='ignore')
+        if item in ('PostedDate', 'DeliveredDate'):
+            return utils.formatdate(float(int(val)))
         else:
-            return val
+            return str(val)
 
     def getList(self, doc, item):
         return [
@@ -63,18 +66,29 @@ class LotusNotesMailbox(Mailbox):
     def getNameAndAdress(self, doc, nameItem, adressItem):
         # If there is no name, the address is in the first list
         # The second list contains a "."
-        # TODO : don't show the dot if the first part is and email address
-        pairs = zip(
+        # Using "map" instead of "zip" because lists can have different lengths
+        pairs = map(
+            None,
             self.getList(doc, nameItem),
             self.getList(doc, adressItem)
         )
         # LDAP identifiers start with CN= and go to the next "/"
-        # TODO : Remove it only if it's present
-        return ','.join([
-            pair[0].split('/')[0][3:]
-            + ' <' + pair[1] + '>'
-            for pair in pairs
-        ])
+        names = []
+        for pair in pairs:
+            if pair[0] is None:
+                name = ''
+            elif pair[0][:3] == "CN=":
+                name = pair[0].split('/')[0][3:]
+            else:
+                name = pair[0]
+            if pair[1] == '.' or pair[1] == '' or pair[1] is None:
+                addr = ''
+            else:
+                addr = ' <' + pair[1] + '>'
+            if name != '':
+                names.append(name + addr)
+
+        return ','.join(names)
 
     def attachmentsExist(self, doc):
         for item in doc.Items:
@@ -108,23 +122,16 @@ class LotusNotesMailbox(Mailbox):
             if item.Name == '$FILE':
                 self.addAttachment(message, doc, item)
 
+    def setHeaderIfPresent(self, message, RFCHeader, doc, LotusHeader, INetLotusHeader):
+        text = self.getNameAndAdress(doc, LotusHeader, INetLotusHeader)
+        if len(text) != 0:
+            message[RFCHeader] = text
+
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
         doc = self.mailStorage.database.GetDocumentByID(key)
 
-        # Debug tools
-        items = "-------------------------------------------------\n"
-        for item in doc.Items:
-            name = item.Name.encode(LotusNotesCharset, errors='ignore')
-            text = item.Text.encode(LotusNotesCharset, errors='ignore')
-            if name != "Body":
-                if text != "":
-                    items += name + ':' + text + '\n'
-                else:
-                    items += name + ':' + str(item.Values) + '\n'
-        # /Debug tools
-
-        body = self.getValue(doc, 'Body') + items
+        body = self.getValue(doc, 'Body')
         bodymessage = MIMEText(body, _charset=LotusNotesCharset)
 
         if self.attachmentsExist(doc):
@@ -136,16 +143,49 @@ class LotusNotesMailbox(Mailbox):
             message = bodymessage
 
         message['Subject'] = self.getValue(doc, 'Subject')
-        message['From'] = self.getNameAndAdress(doc, 'From', 'INetFrom')
-        message['To'] = self.getNameAndAdress(doc, 'SendTo', 'InetSendTo')
-        message['Cc'] = self.getNameAndAdress(doc, 'CopyTo', 'InetCopyTo')
-        message['Date'] = self.getValue(doc, "PostedDate")
-        if message['Date'] == u'':
-            message['Date'] = self.getValue(doc, "DeliveredDate")
+        self.setHeaderIfPresent(message, 'From', doc, 'From', 'INetFrom')
+        self.setHeaderIfPresent(message, 'Reply-To', doc, 'ReplyTo', '$INetReplyTo')
+        self.setHeaderIfPresent(message, 'To', doc, 'SendTo', 'InetSendTo')
+        self.setHeaderIfPresent(message, 'Cc', doc, 'CopyTo', 'InetCopyTo')
+        self.setHeaderIfPresent(message, 'Bcc', doc, 'BlindCopyTo', 'InetBlindCopyTo')
+        mDate = self.getValue(doc, "PostedDate")
+        if mDate is None or mDate == '':
+            mDate = self.getValue(doc, "DeliveredDate")
+        typeOfmDate = str(type(mDate))
+        message['Date'] = mDate
         message['User-Agent'] = self.getValue(doc, "$Mailer")
         message['Message-ID'] = self.getValue(doc, "$MessageID")
         # TODO status
         setContext(message, key, 'read', 'add')
+
+        # Debug tools
+        dump = "--------------------------------------------------\n"
+        dump += "== Lotus Notes Headers ==\n"
+        hasPostedDate = False
+        hasDeliveredDate = False
+        for item in doc.Items:
+            name = item.Name.encode(LotusNotesCharset, errors='ignore')
+            if name in ('PostedDate', 'DeliveredDate'):
+                dump += name + ':(' + str(type(item.Values)) + ') ' + str(item.Values) + ' -> ' + utils.formatdate(float(int(item.Values[0]))) + '\n'
+            if name == 'PostedDate':
+                hasPostedDate = True
+            if name == 'DeliveredDate':
+                hasDeliveredDate = True
+            text = item.Text.encode(LotusNotesCharset, errors='ignore')
+            if name != "Body":
+                if text != "":
+                    dump += name + ':' + text + '\n'
+                else:
+                    dump += name + ':(' + str(type(item.Values)) + ') ' + str(item.Values) + '\n'
+        dump += 'hasPostedDate:' + str(hasPostedDate) + '\n'
+        dump += 'hasDeliveredDate:' + str(hasDeliveredDate) + '\n'
+        dump += "== Message Headers ==\n"
+        dump += 'typeOfmDate:' + str(typeOfmDate) + ' ' + mDate + '\n'
+        for name, text in message.items():
+            dump += name + ': (' + str(type(text)) + ')' + text + '\n'
+        message.dump = dump
+        # /Debug tools
+        
         return message
 
 
@@ -178,7 +218,13 @@ class LotusNotesMailStorage(AbstractMailStorage):
         self.LotusFolders = {}
 
     def closeSession(self):
-        raise NotImplementedError('Not implemented as of yet')
+        # Hope it's enough to terminate a session cleanly
+        # I didn't find a function to do it directly
+        # See http://www.ibm.com/support/knowledgecenter/SSVRGU_9.0.0/com.ibm.designer.domino.main.doc/H_NOTESSESSION_CLASS.html
+        self.LotusFolders = None
+        self.folders = None
+        self.database = None
+        self.session = None
 
     def fromLotus(self, folder):
         out = '/' + folder.encode(LotusNotesCharset).replace('\\', '/')

@@ -18,7 +18,7 @@ class MailToolboxStudio(object):
         self.config = config.Config(self.appName)
         self.config.read()
         self.project = project.Project()
-        if self.config.lastProject:
+        if self.config.lastProject and os.path.exists(self.config.lastProject):
             self.project.loadFromFile(self.config.lastProject)
 
     def main(self):

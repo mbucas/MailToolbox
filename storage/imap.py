@@ -6,6 +6,7 @@ from email import message_from_string
 from email.message import Message
 import imaplib
 import re
+import time
 
 from abstractmailstorage import *
 import imap_utf7
@@ -30,7 +31,7 @@ class ImapMailbox(Mailbox):
             '',
             # TODO Time should be from the original message
             imaplib.Time2Internaldate(time.time()),
-            str(new_message)
+            message.as_string()
         )
 
     def iterkeys(self):
@@ -120,7 +121,7 @@ class ImapMailStorage(AbstractMailStorage):
                 # But subfolders like /[Gmail]/Spam exist
                 if folder != '/[Gmail]':
                     self.folders.append(folder)
-                    print folder
+                    #~ print folder
         else:
             # TODO Handle errors
             pass

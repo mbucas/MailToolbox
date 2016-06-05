@@ -3,6 +3,8 @@
 
 import os
 import sys
+import rfc822
+from email import message
 from mailbox import Maildir
 
 from abstractmailstorage import *
@@ -31,7 +33,11 @@ class MaildirMailStorage(AbstractMailStorage):
 
     def readFolders(self):
         alldirs = [
-            ldir[0].replace(self.properties["path"], '')
+            (
+                ldir[0]
+                .replace(self.properties["path"], '')
+                .replace(os.sep, '/')
+            )
             for ldir in os.walk(self.properties["path"])
             if ldir[0] != self.properties["path"]
         ]
@@ -51,8 +57,10 @@ class MaildirMailStorage(AbstractMailStorage):
         return self.folders
 
     def getFolderMailbox(self, folderName, create=True):
+        f = os.path.join(self.properties["path"], os.path.join(*(folderName.split('/'))))
+        print "=> ", f
         return MaildirMailbox(
-            os.path.join(self.properties["path"], os.path.join(*folderName.split('/'))),
+            os.path.join(self.properties["path"], os.path.join(*(folderName.split('/')))),
             None,
             True
         )
