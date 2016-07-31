@@ -97,25 +97,28 @@ class LotusNotesMailbox(Mailbox):
         return False
 
     def addAttachment(self, message, doc, item):
-        dtemp = tempfile.mkdtemp()
-        tempAttach = os.path.join(dtemp, 'tempAttach')
         attachmentName = item.Values[0]
         attachmentRef = doc.GetAttachment(attachmentName)
-        attachmentRef.ExtractFile(tempAttach)
-        attachment = MIMEBase('application', 'octet-stream')
-        fp = open(tempAttach, 'rb')
-        attachment.set_payload(fp.read())
-        fp.close()
-        encoders.encode_base64(attachment)
-        fname = attachmentName.encode(LotusNotesCharset, errors='ignore')
-        attachment.add_header(
-            'Content-Disposition',
-            'attachment',
-            filename=fname
-        )
-        message.attach(attachment)
-        os.remove(tempAttach)
-        os.rmdir(dtemp)
+        if attachmentRef:
+            dtemp = tempfile.mkdtemp()
+            tempAttach = os.path.join(dtemp, 'tempAttach')
+            attachmentRef.ExtractFile(tempAttach)
+            attachment = MIMEBase('application', 'octet-stream')
+            fp = open(tempAttach, 'rb')
+            attachment.set_payload(fp.read())
+            fp.close()
+            encoders.encode_base64(attachment)
+            fname = attachmentName.encode(LotusNotesCharset, errors='ignore')
+            attachment.add_header(
+                'Content-Disposition',
+                'attachment',
+                filename=fname
+            )
+            message.attach(attachment)
+            os.remove(tempAttach)
+            os.rmdir(dtemp)
+        else:
+            message.invalidAttachment = True
 
     def addAttachments(self, message, doc):
         for item in doc.Items:
@@ -136,11 +139,13 @@ class LotusNotesMailbox(Mailbox):
 
         if self.attachmentsExist(doc):
             message = MIMEMultipart(charset=LotusNotesCharset)
+            message.invalidAttachment = False
             message.set_charset(LotusNotesCharset)
             message.attach(bodymessage)
             self.addAttachments(message, doc)
         else:
             message = bodymessage
+            message.invalidAttachment = False
 
         message['Subject'] = self.getValue(doc, 'Subject')
         self.setHeaderIfPresent(message, 'From', doc, 'From', 'INetFrom')
@@ -185,7 +190,10 @@ class LotusNotesMailbox(Mailbox):
             dump += name + ': (' + str(type(text)) + ')' + text + '\n'
         message.dump = dump
         # /Debug tools
-        
+        if message.invalidAttachment:
+            print "Attachment not found for mail"
+            print message.dump
+
         return message
 
 
