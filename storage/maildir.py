@@ -58,7 +58,6 @@ class MaildirMailStorage(AbstractMailStorage):
 
     def getFolderMailbox(self, folderName, create=True):
         f = os.path.join(self.properties["path"], os.path.join(*(folderName.split('/'))))
-        print "=> ", f
         return MaildirMailbox(
             os.path.join(self.properties["path"], os.path.join(*(folderName.split('/')))),
             None,
@@ -126,7 +125,6 @@ class MaildirMailStorage(AbstractMailStorage):
                 try:
                     os.mkdir(os.path.join(folderpath, subdir))
                 except OSError:
-                    print 'OSError'
                     pass
 
         return folderName in self.folders
