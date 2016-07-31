@@ -95,9 +95,7 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__()
         # Load interface
         self.ui = uic.loadUi("ui/mainwindow.ui", self)
-        self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.png"))
-        )
+        self.setWindowIcon(QtGui.QIcon("ui/icon.png"))
 
         # Project menu
         self.ui.actionNew.triggered.connect(self.newProject)

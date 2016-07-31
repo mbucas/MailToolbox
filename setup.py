@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # coding:utf8
 
+import sys
 from distutils.core import setup
+
+if sys.platform == 'win32':
+    import py2exe
+    sys.path.append("C:\\Program Files\\Calibre2\\Microsoft.VC90.CRT")
 
 setup(
     name='MailToolbox',
@@ -21,6 +26,12 @@ setup(
         'MailToolboxRunner.py',
         'MailToolboxStudio.py',
     ],
+    console=[
+        'MailToolboxRunner.py',
+    ],
+    windows=[
+        'MailToolboxStudio.py',
+    ],
     packages=[
         'config',
         'engine',
@@ -30,6 +41,10 @@ setup(
         'ui',
     ],
     package_data={'ui': ['icon.png', 'mainwindow.ui']},
+    data_files=[
+        ('ui', ['ui\\icon.png', ]),
+        ('ui', ['ui\\mainwindow.ui', ]),
+    ],
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Win32 (MS Windows)',
