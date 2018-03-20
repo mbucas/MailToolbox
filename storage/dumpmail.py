@@ -18,9 +18,12 @@ class DumpMailbox(Mailbox):
 
     def add(self, message):
         if hasattr(message, "dump"):
-            self.file.write(message.dump)
+            try:
+                self.file.write(message.dump)
+            except:
+                self.file.write(message.dump.encode('iso-8859-15', errors='ignore'))
         else:
-            self.file.write(message.as_string())
+            self.file.write(('-' * 80) + '\n' + message.as_string() + '\n\n')
 
     def __len__(self):
         """Return a count of messages in the mailbox."""

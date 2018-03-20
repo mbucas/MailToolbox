@@ -156,7 +156,6 @@ class LotusNotesMailbox(Mailbox):
         mDate = self.getValue(doc, "PostedDate")
         if mDate is None or mDate == '':
             mDate = self.getValue(doc, "DeliveredDate")
-        typeOfmDate = str(type(mDate))
         message['Date'] = mDate
         message['User-Agent'] = self.getValue(doc, "$Mailer")
         message['Message-ID'] = self.getValue(doc, "$MessageID")
@@ -164,8 +163,7 @@ class LotusNotesMailbox(Mailbox):
         setContext(message, key, 'read', 'add')
 
         # Debug tools
-        dump = "--------------------------------------------------\n"
-        dump += "== Lotus Notes Headers ==\n"
+        dump = ('-' * 80) + '\n' + "== Lotus Notes Headers ==\n"
         hasPostedDate = False
         hasDeliveredDate = False
         for item in doc.Items:
@@ -185,9 +183,10 @@ class LotusNotesMailbox(Mailbox):
         dump += 'hasPostedDate:' + str(hasPostedDate) + '\n'
         dump += 'hasDeliveredDate:' + str(hasDeliveredDate) + '\n'
         dump += "== Message Headers ==\n"
-        dump += 'typeOfmDate:' + str(typeOfmDate) + ' ' + mDate + '\n'
+        dump += 'typeOfmDate:' + str(type(mDate)) + ' ' + mDate + '\n'
         for name, text in message.items():
             dump += name + ': (' + str(type(text)) + ')' + text + '\n'
+        dump += '\n\n'
         message.dump = dump
         # /Debug tools
         if message.invalidAttachment:
