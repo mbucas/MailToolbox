@@ -4,7 +4,7 @@
 from mailbox import Mailbox
 from email.message import Message
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 
 class FakeMailbox(Mailbox):
@@ -87,5 +87,6 @@ class FakeMailStorage(AbstractMailStorage):
 
     def serializeToXml(self):
         raise NotImplementedError('Method is not implemented yet')
+
 
 RegisterMailStorage(FakeMailStorage)

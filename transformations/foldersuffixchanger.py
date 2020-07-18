@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding:utf8
 
-from abstracttransformation import *
+from .abstracttransformation import *
 
 
 class FolderSuffixChanger(AbstractTransformation):
@@ -11,5 +11,6 @@ class FolderSuffixChanger(AbstractTransformation):
 
     def transform(self, mailFolder, mail):
         raise NotImplementedError('Method is not implemented yet')
+
 
 RegisterTransformation(FolderSuffixChanger)

@@ -99,6 +99,7 @@ class AbstractMailStorage(object):
                 )
         return storage
 
+
 MailStorageRegistry = {}
 
 
@@ -112,7 +113,9 @@ def MailStorageFactory(name, properties):
     """
     if name:
         if name not in MailStorageRegistry:
-            raise NotImplementedError("MailStorage %s is not implemented" % name)
+            raise NotImplementedError(
+                "MailStorage %s is not implemented" % name
+            )
         else:
             return MailStorageRegistry[name](properties)
     else:

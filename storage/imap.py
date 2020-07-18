@@ -8,8 +8,8 @@ import imaplib
 import re
 import time
 
-from abstractmailstorage import *
-import imap_utf7
+from .abstractmailstorage import *
+from .imap_utf7 import *
 
 
 class ImapMailbox(Mailbox):
@@ -91,7 +91,10 @@ class ImapMailStorage(AbstractMailStorage):
             self.session = imaplib.IMAP4_SSL(IMAPserver)
         else:
             self.session = imaplib.IMAP4(IMAPserver)
-        self.session.login(self.properties['user'], self.properties['password'])
+        self.session.login(
+            self.properties['user'],
+            self.properties['password']
+        )
         self.folders = None
         self.IMAPFolders = {}
 
@@ -110,18 +113,27 @@ class ImapMailStorage(AbstractMailStorage):
             return imap_utf7.encode(folder[1:].decode('utf8'))
 
     def readFolders(self):
-        self.list_pattern = re.compile(r'\((?P<flags>.*?)\) "(?P<delimiter>.*)" (?P<folder>.*)')
+        self.list_pattern = re.compile(
+            r'\((?P<flags>.*?)\) '
+            + '"(?P<delimiter>.*)"'
+            + ' (?P<folder>.*)'
+        )
         self.folders = []
         status, list = self.session.list()
         if status == 'OK':
             for elem in list:
-                flags, delimiter, folder_utf7 = self.list_pattern.match(elem).groups()
+                flags, delimiter, folder_utf7 = (
+                    self
+                    .list_pattern
+                    .match(elem)
+                    .groups()
+                )
                 folder = self.fromIMAP(folder_utf7.strip('"'))
-                # This folder makes imaplib complain, because it doesn't really exist
+                # This folder makes imaplib complain, because
+                # it doesn't really exist
                 # But subfolders like /[Gmail]/Spam exist
                 if folder != '/[Gmail]':
                     self.folders.append(folder)
-                    #~ print folder
         else:
             # TODO Handle errors
             pass

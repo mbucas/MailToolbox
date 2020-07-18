@@ -40,7 +40,10 @@ class Engine(object):
                 for transformation in self.project.transformations:
                     if target_folder and target_mail:
                         target_folder, target_mail = (
-                            transformation.transform(target_folder, target_mail)
+                            transformation.transform(
+                                target_folder,
+                                target_mail
+                            )
                         )
                     else:
                         break
@@ -54,13 +57,17 @@ class Engine(object):
                     # due to transformations, check every time
                     if not self.project.target.hasFolder(target_folder):
                         self.project.target.createFolder(target_folder)
-                    mailboxTarget = self.project.target.getFolderMailbox(target_folder)
+                    mailboxTarget = (
+                        self
+                        .project
+                        .target
+                        .getFolderMailbox(target_folder)
+                    )
 
                     # Get action to apply
-                    if self.project.target.properties['action'] == 'data driven':
+                    action = self.project.target.properties['action']
+                    if action == 'data driven':
                         action = target_mail.action
-                    else:
-                        action = self.project.target.properties['action']
 
                     # Apply action
                     if action == 'add':
@@ -70,7 +77,9 @@ class Engine(object):
                     elif action == 'update':
                         mailboxTarget.update(target_mail)
                     else:  # TODO Not the correct Exception type
-                        raise NotImplementedError('Action unknown' + target_mail.action)
+                        raise NotImplementedError(
+                            'Action unknown' + target_mail.action
+                        )
 
         self.project.source.closeSession()
         self.project.target.closeSession()

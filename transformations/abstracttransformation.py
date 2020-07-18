@@ -40,8 +40,14 @@ class AbstractTransformation(object):
             instance=self.instance
         )
         for p in self.properties:
-            ET.SubElement(transformation, 'property', name=p, value=self.properties[p])
+            ET.SubElement(
+                transformation,
+                'property',
+                name=p,
+                value=self.properties[p]
+            )
         return transformation
+
 
 TransformationRegistry = {}
 
@@ -56,7 +62,9 @@ def TransformationFactory(name, instance, properties):
     """
     if name:
         if name not in TransformationRegistry:
-            raise NotImplementedError("Transformation %s is not implemented" % name)
+            raise NotImplementedError(
+                "Transformation %s is not implemented" % name
+            )
         else:
             return TransformationRegistry[name](instance, properties)
     else:

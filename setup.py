@@ -18,8 +18,8 @@ setup(
     url='https://mickael.bucas.name/',
     license='GPLv3+',
     keywords=[
-        'mail', 'email', 'e-mail', 'utility', 'utilities', 'move', 'migration',
-        'extract', 'backup'
+        'mail', 'email', 'e-mail', 'utility', 'utilities', 'move',
+        'migration', 'extract', 'backup'
     ],
     platforms=['Linux', 'Windows'],
     scripts=[

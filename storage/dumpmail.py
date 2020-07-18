@@ -4,7 +4,7 @@
 from mailbox import Mailbox
 from email.message import Message
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 
 class DumpMailbox(Mailbox):
@@ -20,8 +20,10 @@ class DumpMailbox(Mailbox):
         if hasattr(message, "dump"):
             try:
                 self.file.write(message.dump)
-            except:
-                self.file.write(message.dump.encode('iso-8859-15', errors='ignore'))
+            except Exception as e:
+                self.file.write(
+                    message.dump.encode('iso-8859-15', errors='ignore')
+                )
         else:
             self.file.write(('-' * 80) + '\n' + message.as_string() + '\n\n')
 
@@ -63,7 +65,12 @@ class DumpMailStorage(AbstractMailStorage):
 
     def getFolderMailbox(self, folderName, create=True):
         if not self.mailbox:
-            self.mailbox = DumpMailbox(self.properties["path"], None, True, self.file)
+            self.mailbox = DumpMailbox(
+                self.properties["path"],
+                None,
+                True,
+                self.file
+            )
         return self.mailbox
 
     def createFolder(self, folderName, includingPath=False):
@@ -74,5 +81,6 @@ class DumpMailStorage(AbstractMailStorage):
 
     def hasFolder(self, folderName):
         return True
+
 
 RegisterMailStorage(DumpMailStorage)

@@ -4,7 +4,7 @@
 import os
 from mailbox import mbox
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 
 class ThunderbirdMailbox(mbox):
@@ -38,7 +38,12 @@ class ThunderbirdMailStorage(AbstractMailStorage):
 
         fullContent = [
             entry
-            for entry in os.listdir(os.path.join(self.properties["path"], diskSubFolder))
+            for entry in os.listdir(
+                os.path.join(
+                    self.properties["path"],
+                    diskSubFolder
+                )
+            )
         ]
         result = []
         for entry in fullContent:
@@ -72,13 +77,18 @@ class ThunderbirdMailStorage(AbstractMailStorage):
             if includingPath:
                 pass  # TODO
             else:
-                if os.path.exists(os.path.basename(self.getRealPath(folderName))):
-                    return mailbox.mbox(self.getRealPath(folderName), None, True)
+                if os.path.exists(
+                    os.path.basename(self.getRealPath(folderName))
+                ):
+                    return mailbox.mbox(
+                        self.getRealPath(folderName), None, True
+                    )
 
     def deleteFolder(self, folderName, includingChildren=False):
         pass
 
     def hasFolder(self, folderName):
         return os.path.exists(self.getRealPath(folderName))
+
 
 RegisterMailStorage(ThunderbirdMailStorage)

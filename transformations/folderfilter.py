@@ -3,7 +3,7 @@
 
 import re
 
-from abstracttransformation import *
+from .abstracttransformation import *
 
 
 class FolderFilter(AbstractTransformation):
@@ -18,8 +18,14 @@ class FolderFilter(AbstractTransformation):
             'label': 'Method',
             'content': 'list',
             'desc': 'Filtering Method',
-            # TODO : prepare translation : labels are used directly in the next function !
-            'values': ['Starts With', 'Ends With', 'Contains', 'Regular Expression', ],
+            # TODO : prepare translation : labels are used directly in
+            # the next function !
+            'values': [
+                'Starts With',
+                'Ends With',
+                'Contains',
+                'Regular Expression',
+            ],
         })
         self.expectedProperties.append({
             'key': 'folderValue',
@@ -45,7 +51,9 @@ class FolderFilter(AbstractTransformation):
             self.transform = transform_regexp
             self.regexp = re.compile(self.properties["pattern"])
         else:
-            raise NotImplementedError("Method %s is not implemented" % self.properties["method"])
+            raise NotImplementedError(
+                "Method %s is not implemented" % self.properties["method"]
+            )
 
     def transform_startswith(self, mailFolder, mail):
         if mailFolder.startswith(self.properties["folderValue"]):

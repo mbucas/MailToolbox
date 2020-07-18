@@ -26,7 +26,7 @@
          <x>0</x>
          <y>0</y>
          <width>922</width>
-         <height>549</height>
+         <height>532</height>
         </rect>
        </property>
        <layout class="QHBoxLayout" name="horizontalLayout_3"/>
@@ -41,7 +41,7 @@
      <x>0</x>
      <y>0</y>
      <width>938</width>
-     <height>22</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuProject">

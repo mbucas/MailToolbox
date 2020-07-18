@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding:utf8
 
-from abstracttransformation import *
+from .abstracttransformation import *
 
 
 class NoTransformation(AbstractTransformation):
@@ -11,5 +11,6 @@ class NoTransformation(AbstractTransformation):
 
     def transform(self, mailFolder, mail):
         return mailFolder, mail
+
 
 RegisterTransformation(NoTransformation)

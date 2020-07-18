@@ -4,12 +4,7 @@
 import sys
 import os
 
-import sip
-
-# This is only needed for Python v2 but is harmless for Python v3.
-sip.setapi('QVariant', 2)
-
-from PyQt4 import QtCore, QtGui, uic
+from PyQt5 import Qt, QtCore, QtGui, QtWidgets, uic
 
 from config import config
 from project import project
@@ -20,20 +15,27 @@ from engine import engine
 
 def showText(text):
     try:
-        print text
+        print(text)
     except UnicodeEncodeError:
-        print text.encode('utf8')
+        print(text.encode('utf8'))
 
 
-class DataDelegate(QtGui.QItemDelegate):
+class DataDelegate(QtWidgets.QItemDelegate):
 
     def setPropertiesDescriptions(self, properties):
         self.properties = properties
         self.hidden = {}
 
     def getPropertyDesc(self, index):
-        propertyLabelIndex = index.model().index(index.row(), 0, QtCore.QModelIndex())
-        propertyLabel = index.model().data(propertyLabelIndex, QtCore.Qt.EditRole)
+        propertyLabelIndex = index.model().index(
+            index.row(),
+            0,
+            QtCore.QModelIndex()
+        )
+        propertyLabel = index.model().data(
+            propertyLabelIndex,
+            QtCore.Qt.EditRole
+        )
         return [p for p in self.properties if p['label'] == propertyLabel][0]
 
     def createEditor(self, parent, option, index):
@@ -41,15 +43,14 @@ class DataDelegate(QtGui.QItemDelegate):
             return None
         propertyDesc = self.getPropertyDesc(index)
         if propertyDesc['content'] == 'string':
-            return QtGui.QLineEdit(parent)
+            return QtWidgets.QLineEdit(parent)
         elif propertyDesc['content'] == 'hidden':
-            edit = QtGui.QLineEdit(parent)
+            edit = QtWidgets.QLineEdit(parent)
             # As the Treeview doesn't hide data,
             # it's useless to hide it in the editor
-            #~ edit.setEchoMode(QtGui.QLineEdit.Password)
             return edit
         elif propertyDesc['content'] == 'list':
-            comboBox = QtGui.QComboBox(parent)
+            comboBox = QtWidgets.QComboBox(parent)
             for e in propertyDesc['values']:
                 comboBox.addItem(e)
             return comboBox
@@ -89,7 +90,7 @@ class DataDelegate(QtGui.QItemDelegate):
         widget.setGeometry(option.rect)
 
 
-class MainWindow(QtGui.QMainWindow):
+class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, appName, config, project):
         super(MainWindow, self).__init__()
@@ -109,16 +110,17 @@ class MainWindow(QtGui.QMainWindow):
         # Help menu
         self.ui.actionAbout.triggered.connect(self.about)
 
+        # Model
+        self.model = QtGui.QStandardItemModel(1, 3)
+        # At last https://stackoverflow.com/questions/56603496/
+        # qtreeview-data-changed-signal-slot-implementation
+        self.model.dataChanged.connect(self.onDataChanged)
+
         # Prepare property editor
-        self.ui.treeView.setModel(QtGui.QStandardItemModel(0, 0))
-        self.treeView.setSelectionBehavior(self.treeView.SelectRows)
+        self.ui.treeView.setModel(self.model)
+        self.ui.treeView.setSelectionBehavior(self.ui.treeView.SelectRows)
         self.delegate = DataDelegate()
-        self.treeView.setItemDelegate(self.delegate)
-        self.treeView.connect(
-            self.treeView.model(),
-            QtCore.SIGNAL("dataChanged(QModelIndex,QModelIndex)"),
-            self.onDataChanged
-        )
+        self.ui.treeView.setItemDelegate(self.delegate)
 
         # Set internal values
         self.appName = appName
@@ -158,21 +160,21 @@ class MainWindow(QtGui.QMainWindow):
         model.setHorizontalHeaderLabels(("Property", "Value", "Description"))
 
     def insertArrowWidget(self, layout, pos):
-        arrowFrame = QtGui.QFrame()
+        arrowFrame = QtWidgets.QFrame()
         arrowFrame.setMinimumSize(120, 120)
         arrowFrame.setMaximumSize(120, 120)
-        arrowLayout = QtGui.QVBoxLayout()
+        arrowLayout = QtWidgets.QVBoxLayout()
         arrowLayout.setContentsMargins(0, 0, 0, 0)
         arrowFrame.setLayout(arrowLayout)
 
-        label = QtGui.QLabel("->")
-        label.setFont(QtGui.QFont("Courier New", 26, QtGui.QFont.Bold))
+        label = QtWidgets.QLabel("->")
+        label.setFont(Qt.QFont("Courier New", 26, Qt.QFont.Bold))
         label.setAlignment(QtCore.Qt.AlignCenter)
         label.setMinimumSize(119, 80)
         label.setMaximumSize(119, 80)
         arrowFrame.layout().addWidget(label)
 
-        insertButton = QtGui.QPushButton("Insert\nTransformation")
+        insertButton = QtWidgets.QPushButton("Insert\nTransformation")
         insertButton.clicked.connect(self.insertTransformation)
         insertButton.setMinimumSize(119, 0)
         insertButton.setMaximumSize(119, 16777215)
@@ -181,7 +183,7 @@ class MainWindow(QtGui.QMainWindow):
         layout.insertWidget(pos, arrowFrame)
 
     def insertStorageWidget(self, objectName, layout, pos):
-        storageButton = QtGui.QPushButton(objectName)
+        storageButton = QtWidgets.QPushButton(objectName)
         storageButton.setObjectName(objectName)
         storageButton.clicked.connect(self.showStorageProperties)
         font = storageButton.font()
@@ -195,17 +197,19 @@ class MainWindow(QtGui.QMainWindow):
     def insertTransformationWidget(self, insertIndex, transformation, objectName):
         layout = self.scrollAreaWidgetContents.layout()
 
-        newFrame = QtGui.QFrame()
+        newFrame = QtWidgets.QFrame()
         newFrame.setMinimumSize(120, 120)
         newFrame.setMaximumSize(120, 120)
-        newLayout = QtGui.QVBoxLayout()
+        newLayout = QtWidgets.QVBoxLayout()
         newLayout.setContentsMargins(0, 0, 0, 0)
         newFrame.setLayout(newLayout)
 
-        transformationButton = QtGui.QPushButton("Transformation")
+        transformationButton = QtWidgets.QPushButton("Transformation")
         transformationButton.setObjectName(objectName)
         transformation.buttonName = transformationButton.objectName()
-        transformationButton.clicked.connect(self.showTransformationProperties)
+        transformationButton.clicked.connect(
+            self.showTransformationProperties
+        )
         font = transformationButton.font()
         font.setPointSize(12)
         transformationButton.setFont(font)
@@ -213,7 +217,7 @@ class MainWindow(QtGui.QMainWindow):
         transformationButton.setMaximumSize(120, 100)
         newFrame.layout().addWidget(transformationButton)
 
-        delButton = QtGui.QPushButton("Delete")
+        delButton = QtWidgets.QPushButton("Delete")
         delButton.clicked.connect(self.deleteTransformation)
         delButton.setMinimumSize(120, 20)
         delButton.setMaximumSize(120, 20)
@@ -258,7 +262,7 @@ class MainWindow(QtGui.QMainWindow):
 
         # Project
         self.currentProject.changed = True
-        removePosition = ((index + 1) / 2) - 1
+        removePosition = int(((index + 1) / 2) - 1)
         self.currentProject.transformations.pop(removePosition)
 
     def insertTransformation(self):
@@ -270,7 +274,7 @@ class MainWindow(QtGui.QMainWindow):
         frame = self.sender().parentWidget()
         layout = self.scrollAreaWidgetContents.layout()
         index = layout.indexOf(frame)
-        insertPosition = ((index + 1) / 2) - 1
+        insertPosition = int(((index + 1) / 2) - 1)
 
         # Project part
         self.currentProject.changed = True
@@ -282,7 +286,10 @@ class MainWindow(QtGui.QMainWindow):
                 'transformationtype': "NoTransformation",
             }
         )
-        self.currentProject.transformations.insert(insertPosition, transformation)
+        self.currentProject.transformations.insert(
+            insertPosition,
+            transformation
+        )
 
         # Visual part
         self.insertTransformationWidget(index, transformation, objectName)
@@ -299,17 +306,6 @@ class MainWindow(QtGui.QMainWindow):
 
     def onDataChanged(self, index1, index2):
         self.currentProject.changed = True
-        #~ print (
-            #~ index1.row(),
-            #~ index1.column(),
-            #~ index1.model().data(index1, QtCore.Qt.EditRole)
-        #~ )
-        #~ print (
-            #~ index2.row(),
-            #~ index2.column(),
-            #~ index2.model().data(index2, QtCore.Qt.EditRole)
-        #~ )
-        #~ print self.delegate.getPropertyDesc(index1)
         prop = self.delegate.getPropertyDesc(index1)
         value = str(
             index1
@@ -358,7 +354,9 @@ class MainWindow(QtGui.QMainWindow):
     def showCurrentElementProperties(self):
         self.clearProperties()
         model = self.ui.treeView.model()
-        self.delegate.setPropertiesDescriptions(self.currentElement.expectedProperties)
+        self.delegate.setPropertiesDescriptions(
+            self.currentElement.expectedProperties
+        )
         for prop in self.currentElement.expectedProperties:
             if prop['key'] in self.currentElement.properties:
                 val = self.currentElement.properties[prop['key']]
@@ -427,12 +425,12 @@ class MainWindow(QtGui.QMainWindow):
         self.setProjectNameInTitle()
 
     def openProject(self):
-        file = str(QtGui.QFileDialog.getOpenFileName(
+        file, ext_type = QtWidgets.QFileDialog.getOpenFileName(
             self,
             "Open Project File",
             QtCore.QDir.currentPath(),
             "XML Files (*.xml)"
-        ))
+        )
         self.currentProject = project.Project()
         self.currentProject.loadFromFile(file)
         self.setProjectWidgets()
@@ -446,39 +444,41 @@ class MainWindow(QtGui.QMainWindow):
             self.saveAsProject()
 
     def saveAsProject(self):
-        file = str(QtGui.QFileDialog.getSaveFileName(
+        file, ext_type = QtWidgets.QFileDialog.getSaveFileName(
             self,
             "Save Project File",
             QtCore.QDir.currentPath(),
             "XML Files (*.xml)"
-        ))
+        )
         self.currentProject.saveToFile(file)
         self.config.lastProject = file
         self.setProjectNameInTitle()
 
     def runProject(self):
         self.saveProject()
-        print "Starting"
+        print("Starting")
         runnerEngine = engine.Engine(self.currentProject, showText)
         runnerEngine.run()
-        print "Finished"
+        print("Finished")
 
     def about(self, sender):
-        box = QtGui.QMessageBox(
-            QtGui.QMessageBox.Information,
+        box = QtWidgets.QMessageBox(
+            QtWidgets.QMessageBox.Information,
             "About " + self.appName,
             self.appName + u" © 2012 Mickaël Bucas",
-            QtGui.QMessageBox.Ok
+            QtWidgets.QMessageBox.Ok
         )
         box.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(__file__), "icon.png"))
+            QtWidgets.QIcon(
+                os.path.join(os.path.dirname(__file__), "icon.png")
+            )
         )
         box.setInformativeText(self.appName + " is a toolbox to move mail")
         box.exec_()
 
 
 def show(appName, config, project):
-    app = QtGui.QApplication(sys.argv)
+    app = QtWidgets.QApplication(sys.argv)
     mainWindow = MainWindow(appName, config, project)
     mainWindow.show()
     app.exec_()

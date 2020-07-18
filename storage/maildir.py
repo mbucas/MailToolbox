@@ -3,18 +3,18 @@
 
 import os
 import sys
-import rfc822
+import email
 from email import message
 from mailbox import Maildir
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 
 class MaildirMailbox(Maildir):
     """ For Maildir, we use standard Maildir class from Python library"""
 
     def get_message(self, key):
-        print 'MaildirMailbox.get_message'
+        print('MaildirMailbox.get_message')
         """ Overloading for context data"""
         message = Maildir.get_message(self, key)
         # TODO status
@@ -57,9 +57,15 @@ class MaildirMailStorage(AbstractMailStorage):
         return self.folders
 
     def getFolderMailbox(self, folderName, create=True):
-        f = os.path.join(self.properties["path"], os.path.join(*(folderName.split('/'))))
+        f = os.path.join(
+            self.properties["path"],
+            os.path.join(*(folderName.split('/')))
+        )
         return MaildirMailbox(
-            os.path.join(self.properties["path"], os.path.join(*(folderName.split('/')))),
+            os.path.join(
+                self.properties["path"],
+                os.path.join(*(folderName.split('/')))
+            ),
             None,
             True
         )

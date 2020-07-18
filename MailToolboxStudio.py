@@ -25,6 +25,7 @@ class MailToolboxStudio(object):
         ui.show(self.appName, self.config, self.project)
         self.config.write()
 
+
 if __name__ == "__main__":
     app = MailToolboxStudio()
     app.main()

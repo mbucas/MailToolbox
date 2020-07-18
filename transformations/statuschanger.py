@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding:utf8
 
-from abstracttransformation import *
+from .abstracttransformation import *
 
 
 class StatusChanger(AbstractTransformation):
@@ -16,8 +16,13 @@ class StatusChanger(AbstractTransformation):
             'label': 'Method',
             'content': 'list',
             'desc': 'Filtering Method',
-            # TODO : prepare translation : labels are used directly in the next function !
-            'values': ['Force All Read', 'Force All Unread', 'Invert Status', ],
+            # TODO : prepare translation : labels are used directly in
+            # the next function !
+            'values': [
+                'Force All Read',
+                'Force All Unread',
+                'Invert Status',
+            ],
         })
 
     def prepare_run(self):
@@ -28,7 +33,9 @@ class StatusChanger(AbstractTransformation):
         elif self.properties["method"] == 'Invert Status':
             self.transform = transform_invertstatus
         else:
-            raise NotImplementedError("Method %s is not implemented" % self.properties["method"])
+            raise NotImplementedError(
+                "Method %s is not implemented" % self.properties["method"]
+            )
 
     def transform_forceallread(self, mailFolder, mail):
         mail.status = 'read'

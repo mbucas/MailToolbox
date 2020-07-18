@@ -20,19 +20,19 @@
 # See http://xml.resource.org/public/rfc/html/rfc2192.html
 # Example: imap://user@example.com:port/imap-options
 
-# Mail folder inside the mailbox storage wil be passed as a second argument, and
-# will start with "/"
+# Mail folder inside the mailbox storage wil be passed as a second argument,
+# and will start with "/"
 
 import sys
 
-from dumpmail import *
-from fakemail import *
+from .dumpmail import *
+from .fakemail import *
 
-from nomailstorage import *
-from imap import *
-from maildir import *
-from thunderbird import *
+from .nomailstorage import *
+from .imap import *
+from .maildir import *
+from .thunderbird import *
 
 if sys.platform == 'win32':
-    from lotusnotes import *
-    from outlook import *
+    from .lotusnotes import *
+    from .outlook import *

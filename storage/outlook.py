@@ -17,7 +17,7 @@ import pywintypes
 # required for dealing with attachment
 import tempfile
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 # Constants for OutLook
 
@@ -25,16 +25,17 @@ from abstractmailstorage import *
 PR_SMTP_ADDRESS = "http://schemas.microsoft.com/mapi/proptag/0x39FE001E"
 
 # See http://www.bitpim.org/apidoc/native.outlook.outlook_com-pysrc.html
-olBCC        = 0x3 # from enum OlMailRecipientType
-olCC         = 0x2 # from enum OlMailRecipientType
-olOriginator = 0x0 # from enum OlMailRecipientType
-olTo         = 0x1 # from enum OlMailRecipientType
+# from enum OlMailRecipientType
+olOriginator = 0x0
+olTo = 0x1
+olCC = 0x2
+olBCC = 0x3
 # From observation of existing messages
-olReplyTo    = 0x1
+olReplyTo = 0x1
 
 # from enum OlObjectClass
 # https://msdn.microsoft.com/en-us/library/office/ff863329.aspx
-olMail  = 43 
+olMail = 43
 olReport = 46
 olMeetingCancellation = 54
 olMeetingForwardNotification = 181
@@ -55,10 +56,10 @@ MailLikeClasses = [
 
 # OlBodyFormat Enumeration
 # https://msdn.microsoft.com/fr-fr/library/office/ff864792.aspx
-olFormatHTML = 2 # Format HTML
-olFormatPlain = 1 # Format simple
-olFormatRichText = 3 # Format RTF (texte enrichi)
-olFormatUnspecified = 0 # Format non specifie
+olFormatUnspecified = 0  # 0 Format non specifie
+olFormatPlain = 1        # 1 Format simple
+olFormatHTML = 2         # 2 Format HTML
+olFormatRichText = 3      # 3 Format RTF (texte enrichi)
 
 OutlookCharset = 'iso-8859-1'
 
@@ -81,7 +82,8 @@ class OutlookMailbox(Mailbox):
 
     def iterkeys(self):
         """Return an iterator over keys."""
-        for i in range(self.mailStorage.OutlookFolders[self.folder].Items.Count):
+        count = self.mailStorage.OutlookFolders[self.folder].Items.Count
+        for i in range(count):
             entry = i
             if entry:
                 yield entry
@@ -91,15 +93,15 @@ class OutlookMailbox(Mailbox):
         raise NotImplementedError('Method is not implemented yet')
 
     def get_address(self, listsDest, recipient, RFCHeader, OutlookType):
-        propAccessor = recipient.PropertyAccessor 
+        propAccessor = recipient.PropertyAccessor
         if recipient.Type == OutlookType:
             if ',' in recipient.Name:
-                name = '"' + recipient.Name +'"'
+                name = '"' + recipient.Name + '"'
             else:
                 name = recipient.Name
             try:
                 adresse = propAccessor.GetProperty(PR_SMTP_ADDRESS)
-            except Exception, e:
+            except Exception as e:
                 adresse = recipient.Address
             if adresse == '':
                 listsDest[RFCHeader].append(name)
@@ -117,7 +119,10 @@ class OutlookMailbox(Mailbox):
                 attachment.set_payload(fp.read())
                 fp.close()
                 encoders.encode_base64(attachment)
-                fname = item.DisplayName.encode(OutlookCharset, errors='ignore')
+                fname = item.DisplayName.encode(
+                    OutlookCharset,
+                    errors='ignore'
+                )
                 attachment.add_header(
                     'Content-Disposition',
                     'attachment',
@@ -126,9 +131,10 @@ class OutlookMailbox(Mailbox):
                 message.attach(attachment)
                 os.remove(tempAttach)
                 os.rmdir(dtemp)
-            except IOError, e:
+            except IOError as e:
                 # Some attachements are URLs to outside files
-                # The result is a "tempAttach.url" file, with the link to attachement
+                # The result is a "tempAttach.url" file, with the link
+                # to attachement
                 # Open fails on this type of file
                 # Leaving a temporary file and directory is not clean
                 # TODO Clean this mess
@@ -136,9 +142,14 @@ class OutlookMailbox(Mailbox):
 
     def get_message(self, key):
         """Return a Message representation or raise a KeyError."""
-        outlookMessage = self.mailStorage.OutlookFolders[self.folder].Items[key]
+        outlookMessage = (
+            self
+            .mailStorage
+            .OutlookFolders[self.folder]
+            .Items[key]
+        )
         if outlookMessage.Class not in MailLikeClasses:
-            print outlookMessage.Class
+            print(outlookMessage.Class)
             return None
 
         # Body
@@ -147,78 +158,124 @@ class OutlookMailbox(Mailbox):
             if outlookMessage.BodyFormat == olFormatHTML:
                 try:
                     body = outlookMessage.HTMLBody.encode('utf-8')
-                    bodymessage = MIMEText(body, _subtype='html', _charset='utf-8')
-                except UnicodeEncodeError, e:
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='html',
+                        _charset='utf-8'
+                    )
+                except UnicodeEncodeError as e:
                     dumpError = (
-                        ('-' * 80) + '\n' + 
-                        "BodyFormat: " + str(outlookMessage.BodyFormat) + '\n' + 
-                        e.reason + '\n' + 
-                        e.encoding + '\n' +
-                        ('-' * 80) + '\n' + 
-                        outlookMessage.HTMLBody + '\n' 
+                        ('-' * 80) + '\n'
+                        + "BodyFormat: " + str(outlookMessage.BodyFormat)
+                        + '\n'
+                        + e.reason + '\n'
+                        + e.encoding + '\n'
+                        + ('-' * 80) + '\n'
+                        + outlookMessage.HTMLBody + '\n'
                     )
                     body = outlookMessage.HTMLBody
-                    bodymessage = MIMEText(body, _subtype='html', _charset='utf-8')
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='html',
+                        _charset='utf-8'
+                    )
             elif outlookMessage.BodyFormat == olFormatRichText:
                 try:
                     # RTFBody is an array of bytes, so a join is necessary
-                    body = "".join(outlookMessage.RTFBody).decode(OutlookCharset).encode('utf-8')
-                    bodymessage = MIMEText(body, _subtype='rtf', _charset='utf-8')
-                except UnicodeEncodeError, e:
+                    body = (
+                        ""
+                        .join(outlookMessage.RTFBody)
+                        .decode(OutlookCharset)
+                        .encode('utf-8')
+                    )
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='rtf',
+                        _charset='utf-8'
+                    )
+                except UnicodeEncodeError as e:
                     dumpError = (
-                        ('-' * 80) + '\n' + 
-                        "BodyFormat: " + str(outlookMessage.BodyFormat) + '\n' + 
-                        "UnicodeEncodeError: " + e.reason + '\n' + 
+                        ('-' * 80) + '\n' +
+                        "BodyFormat: " + str(outlookMessage.BodyFormat) +
+                        '\n' +
+                        "UnicodeEncodeError: " + e.reason + '\n' +
                         e.encoding + '\n' +
-                        ('-' * 80) + '\n' + 
-                        str(dir(outlookMessage.RTFBody)) + '\n' 
+                        ('-' * 80) + '\n' +
+                        str(dir(outlookMessage.RTFBody)) + '\n'
                     )
                     body = "".join(outlookMessage.RTFBody)
-                    bodymessage = MIMEText(body, _subtype='rtf', _charset='utf-8')
-                except UnicodeDecodeError, e:
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='rtf',
+                        _charset='utf-8'
+                    )
+                except UnicodeDecodeError as e:
                     dumpError = (
-                        ('-' * 80) + '\n' + 
-                        "BodyFormat: " + str(outlookMessage.BodyFormat) + '\n' + 
-                        "UnicodeDecodeError: " + e.reason + '\n' + 
+                        ('-' * 80) + '\n' +
+                        "BodyFormat: " + str(outlookMessage.BodyFormat) +
+                        '\n' +
+                        "UnicodeDecodeError: " + e.reason + '\n' +
                         e.encoding + '\n' +
-                        ('-' * 80) + '\n' + 
-                        str(dir(outlookMessage.RTFBody)) + '\n' 
+                        ('-' * 80) + '\n' +
+                        str(dir(outlookMessage.RTFBody)) + '\n'
                     )
                     body = "".join(outlookMessage.RTFBody)
-                    bodymessage = MIMEText(body, _subtype='rtf', _charset='utf-8')
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='rtf',
+                        _charset='utf-8'
+                    )
             else:
                 # All other formats are considered text
                 try:
                     body = outlookMessage.Body.encode(OutlookCharset)
-                    bodymessage = MIMEText(body, _subtype='plain', _charset='utf-8')
-                except UnicodeEncodeError, e:
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='plain',
+                        _charset='utf-8'
+                    )
+                except UnicodeEncodeError as e:
                     dumpError = (
-                        ('-' * 80) + '\n' + 
-                        "BodyFormat: " + str(outlookMessage.BodyFormat) + '\n' + 
-                        e.reason + '\n' + 
-                        e.encoding + '\n' +
-                        ('-' * 80) + '\n' + 
-                        outlookMessage.Body + '\n' 
+                        ('-' * 80) + '\n'
+                        + "BodyFormat: " + str(outlookMessage.BodyFormat)
+                        + '\n'
+                        + e.reason + '\n'
+                        + e.encoding + '\n'
+                        + ('-' * 80) + '\n'
+                        + outlookMessage.Body + '\n'
                     )
                     body = outlookMessage.Body.encode('utf-8')
-                    bodymessage = MIMEText(body, _subtype='plain', _charset='utf-8')
+                    bodymessage = MIMEText(
+                        body,
+                        _subtype='plain',
+                        _charset='utf-8'
+                    )
         else:
             # All other classes are considered text
             try:
                 body = outlookMessage.Body.encode(OutlookCharset)
-                bodymessage = MIMEText(body, _subtype='plain', _charset='utf-8')
-            except UnicodeEncodeError, e:
+                bodymessage = MIMEText(
+                    body,
+                    _subtype='plain',
+                    _charset='utf-8'
+                )
+            except UnicodeEncodeError as e:
                 dumpError = (
-                    ('-' * 80) + '\n' + 
-                    "Class: " + str(outlookMessage.Class) + '\n' + 
-                    e.reason + '\n' + 
-                    e.encoding + '\n' +
-                    ('-' * 80) + '\n' + 
-                    outlookMessage.Body + '\n' 
+                    ('-' * 80) + '\n'
+                    + "Class: " + str(outlookMessage.Class)
+                    + '\n'
+                    + e.reason + '\n'
+                    + e.encoding + '\n'
+                    + ('-' * 80) + '\n'
+                    + outlookMessage.Body + '\n'
                 )
                 body = outlookMessage.Body.encode('utf-8')
-                bodymessage = MIMEText(body, _subtype='plain', _charset='utf-8')
-                
+                bodymessage = MIMEText(
+                    body,
+                    _subtype='plain',
+                    _charset='utf-8'
+                )
+
         # Attached files
         if outlookMessage.Attachments.Count > 0:
             message = MIMEMultipart(charset=OutlookCharset)
@@ -229,32 +286,37 @@ class OutlookMailbox(Mailbox):
         else:
             message = bodymessage
             message.invalidAttachment = False
-        
+
         # Subject
         message['Subject'] = Header(outlookMessage.Subject, OutlookCharset)
-        
+
         # Date
         try:
             if outlookMessage.SentOn is None:
                 mDate = outlookMessage.ReceivedTime
             else:
                 mDate = outlookMessage.SentOn
-        except AttributeError, e:
+        except AttributeError as e:
             mDate = None
 
         if mDate is not None:
             tDate = (
-                mDate.year, mDate.month, mDate.day, 
-                mDate.hour, mDate.minute, mDate.second, 
+                mDate.year, mDate.month, mDate.day,
+                mDate.hour, mDate.minute, mDate.second,
                 0, 0, 0
             )
-            message['Date'] = time.strftime("%a, %d %b %Y %H:%M:%S -0000", tDate)
-        
+            message['Date'] = (
+                time.strftime(
+                    "%a, %d %b %Y %H:%M:%S -0000",
+                    tDate
+                )
+            )
+
         # Sender
         try:
             if outlookMessage.Sender is not None:
                 if ',' in outlookMessage.Sender.Name:
-                    name = '"' + outlookMessage.Sender.Name +'"'
+                    name = '"' + outlookMessage.Sender.Name + '"'
                 else:
                     name = outlookMessage.Sender.Name
                 exUser = outlookMessage.Sender.GetExchangeUser()
@@ -266,7 +328,7 @@ class OutlookMailbox(Mailbox):
                 else:
                     adresse = ' <' + outlookMessage.SenderEmailAddress + '>'
                 message['From'] = Header(name + adresse, OutlookCharset)
-        except AttributeError, e:
+        except AttributeError as e:
             message['From'] = 'Unknown'
 
         # Recipients
@@ -281,33 +343,48 @@ class OutlookMailbox(Mailbox):
                 self.get_address(listsDest, recipient, 'Bcc', olBCC)
             for header in ('To', 'Cc', 'Bcc'):
                 if len(listsDest[header]) > 0:
-                    message[header] = Header(','.join(listsDest[header]), OutlookCharset)
+                    message[header] = Header(
+                        ','.join(listsDest[header]),
+                        OutlookCharset
+                    )
         if hasattr(outlookMessage, 'ReplyRecipients'):
             listsDest = {}
             listsDest['Reply-To'] = []
             for recipient in outlookMessage.ReplyRecipients:
-                self.get_address(listsDest, recipient, 'Reply-To', olReplyTo)
+                self.get_address(
+                    listsDest,
+                    recipient,
+                    'Reply-To',
+                    olReplyTo
+                )
             if len(listsDest['Reply-To']) > 0:
-                message['Reply-To'] = Header(','.join(listsDest['Reply-To']), OutlookCharset)
-        
+                message['Reply-To'] = Header(
+                    ','.join(listsDest['Reply-To']),
+                    OutlookCharset
+                )
+
         # TODO status
         setContext(message, key, 'read', 'add')
-        
+
         # Debug tools
         dump = ('-' * 80) + '\n'
-        #~ dump = "== Outlook Headers ==\n"
-        #~ if hasattr(outlookMessage, 'ReplyRecipients'):
-            #~ dump += 'ReplyRecipients Count: ' + str(outlookMessage.ReplyRecipients.Count) + '\n'
-            #~ for recipient in outlookMessage.ReplyRecipients:
-                #~ dump += 'ReplyRecipients Type: ' + str(recipient.Type) + '\n'
-                #~ dump += 'ReplyRecipients: ' + str(recipient.Name) + '\n'
-        #~ dump += "== Message Headers ==\n"
-        #~ if message['From'] is not None: 
-            #~ dump += 'From: ' + str(message['From']) + '\n'
-        #~ if message['Date'] is not None:
-            #~ dump += 'Date: ' + str(message['Date']) + '\n'
-        #~ if message['Reply-To'] is not None:
-            #~ dump += 'Reply-To: ' + str(message['Reply-To']) + '\n'
+#        dump = "== Outlook Headers ==\n"
+#        if hasattr(outlookMessage, 'ReplyRecipients'):
+#            dump += (
+#               'ReplyRecipients Count: '
+#               + str(outlookMessage.ReplyRecipients.Count)
+#               + '\n'
+#            )
+#            for recipient in outlookMessage.ReplyRecipients:
+#                dump += 'ReplyRecipients Type: ' + str(recipient.Type) + '\n'
+#                dump += 'ReplyRecipients: ' + str(recipient.Name) + '\n'
+#        dump += "== Message Headers ==\n"
+#        if message['From'] is not None:
+#            dump += 'From: ' + str(message['From']) + '\n'
+#        if message['Date'] is not None:
+#            dump += 'Date: ' + str(message['Date']) + '\n'
+#        if message['Reply-To'] is not None:
+#            dump += 'Reply-To: ' + str(message['Reply-To']) + '\n'
         dump += "== Message Body ==\n"
         dump += dumpError
         dump += '\n'
@@ -316,7 +393,7 @@ class OutlookMailbox(Mailbox):
         else:
             message.dump = dump
         # /Debug tools
-        
+
         return message
 
 
@@ -358,13 +435,13 @@ class OutlookMailStorage(AbstractMailStorage):
             folder = basePath + '/' + folderName
             # Keep a reference to Outlook objects to avoid recursive search
             self.OutlookFolders[folder] = baseFolder[i]
-                
+
             if folder not in self.folders:
                 self.folders.append(folder)
                 if baseFolder[i].Folders:
                     # Recursive call
                     self.getSubFolders(baseFolder[i].Folders, folder)
-        
+
     def readFolders(self):
         self.folders = []
         self.getSubFolders(self.database.Folders, '')
@@ -393,5 +470,6 @@ class OutlookMailStorage(AbstractMailStorage):
         if not self.folders:
             self.readFolders()
         return folderName in self.folders
+
 
 RegisterMailStorage(OutlookMailStorage)

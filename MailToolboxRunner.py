@@ -41,6 +41,7 @@ class MailToolboxRunner(object):
         runnerEngine = engine.Engine(self.project, folderCallback=show)
         runnerEngine.run()
 
+
 if __name__ == "__main__":
     app = MailToolboxRunner()
     app.main()

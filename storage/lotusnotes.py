@@ -12,7 +12,7 @@ import win32com.client
 # required for dealing with attachment
 import tempfile
 
-from abstractmailstorage import *
+from .abstractmailstorage import *
 
 
 LotusNotesCharset = 'iso-8859-15'
@@ -29,7 +29,12 @@ class LotusNotesMailbox(Mailbox):
         Mailbox.__init__(self, path, None, False)
         self.folder = folder
         self.mailStorage = mailStorage
-        self.view = self.mailStorage.database.GetView(self.mailStorage.toLotus(folder))
+        self.view = (
+            self
+            .mailStorage
+            .database
+            .GetView(self.mailStorage.toLotus(folder))
+        )
 
     def add(self, message):
         """Add message and return assigned key."""
@@ -148,11 +153,21 @@ class LotusNotesMailbox(Mailbox):
             message.invalidAttachment = False
 
         message['Subject'] = self.getValue(doc, 'Subject')
-        self.setHeaderIfPresent(message, 'From', doc, 'From', 'INetFrom')
-        self.setHeaderIfPresent(message, 'Reply-To', doc, 'ReplyTo', '$INetReplyTo')
-        self.setHeaderIfPresent(message, 'To', doc, 'SendTo', 'InetSendTo')
-        self.setHeaderIfPresent(message, 'Cc', doc, 'CopyTo', 'InetCopyTo')
-        self.setHeaderIfPresent(message, 'Bcc', doc, 'BlindCopyTo', 'InetBlindCopyTo')
+        self.setHeaderIfPresent(
+            message, 'From', doc, 'From', 'INetFrom'
+        )
+        self.setHeaderIfPresent(
+            message, 'Reply-To', doc, 'ReplyTo', '$INetReplyTo'
+        )
+        self.setHeaderIfPresent(
+            message, 'To', doc, 'SendTo', 'InetSendTo'
+        )
+        self.setHeaderIfPresent(
+            message, 'Cc', doc, 'CopyTo', 'InetCopyTo'
+        )
+        self.setHeaderIfPresent(
+            message, 'Bcc', doc, 'BlindCopyTo', 'InetBlindCopyTo'
+        )
         mDate = self.getValue(doc, "PostedDate")
         if mDate is None or mDate == '':
             mDate = self.getValue(doc, "DeliveredDate")
@@ -169,7 +184,16 @@ class LotusNotesMailbox(Mailbox):
         for item in doc.Items:
             name = item.Name.encode(LotusNotesCharset, errors='ignore')
             if name in ('PostedDate', 'DeliveredDate'):
-                dump += name + ':(' + str(type(item.Values)) + ') ' + str(item.Values) + ' -> ' + utils.formatdate(float(int(item.Values[0]))) + '\n'
+                dump += (
+                    name
+                    + ':('
+                    + str(type(item.Values))
+                    + ') '
+                    + str(item.Values)
+                    + ' -> '
+                    + utils.formatdate(float(int(item.Values[0])))
+                    + '\n'
+                )
             if name == 'PostedDate':
                 hasPostedDate = True
             if name == 'DeliveredDate':
@@ -179,7 +203,14 @@ class LotusNotesMailbox(Mailbox):
                 if text != "":
                     dump += name + ':' + text + '\n'
                 else:
-                    dump += name + ':(' + str(type(item.Values)) + ') ' + str(item.Values) + '\n'
+                    dump += (
+                        name
+                        + ':('
+                        + str(type(item.Values))
+                        + ') '
+                        + str(item.Values)
+                        + '\n'
+                    )
         dump += 'hasPostedDate:' + str(hasPostedDate) + '\n'
         dump += 'hasDeliveredDate:' + str(hasDeliveredDate) + '\n'
         dump += "== Message Headers ==\n"
@@ -190,8 +221,8 @@ class LotusNotesMailbox(Mailbox):
         message.dump = dump
         # /Debug tools
         if message.invalidAttachment:
-            print "Attachment not found for mail"
-            print message.dump
+            print("Attachment not found for mail")
+            print(message.dump)
 
         return message
 
@@ -227,7 +258,8 @@ class LotusNotesMailStorage(AbstractMailStorage):
     def closeSession(self):
         # Hope it's enough to terminate a session cleanly
         # I didn't find a function to do it directly
-        # See http://www.ibm.com/support/knowledgecenter/SSVRGU_9.0.0/com.ibm.designer.domino.main.doc/H_NOTESSESSION_CLASS.html
+        # See http://www.ibm.com/support/knowledgecenter/SSVRGU_9.0.0/
+        # com.ibm.designer.domino.main.doc/H_NOTESSESSION_CLASS.html
         self.LotusFolders = None
         self.folders = None
         self.database = None
@@ -277,5 +309,6 @@ class LotusNotesMailStorage(AbstractMailStorage):
         if not self.folders:
             self.readFolders()
         return folderName in self.folders
+
 
 RegisterMailStorage(LotusNotesMailStorage)
