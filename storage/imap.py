@@ -9,7 +9,7 @@ import re
 import time
 
 from .abstractmailstorage import *
-from .imap_utf7 import *
+from . import imap_utf7
 
 
 class ImapMailbox(Mailbox):
@@ -31,7 +31,7 @@ class ImapMailbox(Mailbox):
             '',
             # TODO Time should be from the original message
             imaplib.Time2Internaldate(time.time()),
-            message.as_string()
+            message.as_string().encode('utf-8')
         )
 
     def iterkeys(self):
@@ -101,16 +101,25 @@ class ImapMailStorage(AbstractMailStorage):
     def closeSession(self):
         self.session.logout()
 
-    def fromIMAP(self, folder):
-        out = '/' + imap_utf7.decode(folder).encode('utf8')
-        self.IMAPFolders[out] = folder
-        return out
+    def fromIMAP(self, IMAPFolder):
+        # Remove quotes if present
+        # See https://stackoverflow.com/questions/25186394/
+        localFolder = imap_utf7.decode(IMAPFolder).strip('"')
+        self.IMAPFolders[localFolder] = IMAPFolder
+        return localFolder
 
-    def toIMAP(self, folder):
-        if folder in self.IMAPFolders:
-            return self.IMAPFolders[folder]
+    def toIMAP(self, localFolder):
+        # Add quotes if white space in folder name
+        # See https://stackoverflow.com/questions/25186394/
+        if localFolder in self.IMAPFolders:
+            return self.IMAPFolders[localFolder]
         else:
-            return imap_utf7.encode(folder[1:].decode('utf8'))
+            if ' ' in localFolder:
+                IMAPFolder = b'"' + imap_utf7.encode(localFolder) + b'"'
+            else:
+                IMAPFolder = imap_utf7.encode(localFolder)
+            self.IMAPFolders[localFolder] = IMAPFolder
+            return IMAPFolder
 
     def readFolders(self):
         self.list_pattern = re.compile(
@@ -125,10 +134,10 @@ class ImapMailStorage(AbstractMailStorage):
                 flags, delimiter, folder_utf7 = (
                     self
                     .list_pattern
-                    .match(elem)
+                    .match(elem.decode('utf-8'))
                     .groups()
                 )
-                folder = self.fromIMAP(folder_utf7.strip('"'))
+                folder = self.fromIMAP(folder_utf7)
                 # This folder makes imaplib complain, because
                 # it doesn't really exist
                 # But subfolders like /[Gmail]/Spam exist
@@ -152,8 +161,10 @@ class ImapMailStorage(AbstractMailStorage):
                 return None
         return ImapMailbox(self.properties['path'], folderName, self)
 
-    def createFolder(self, folderName, includingPath=False):
-        # TODO create recursively
+    def createFolder(self, folderName, includingPath=True):
+        if includingPath:
+            if '/' in folderName:
+                self.createFolder('/'.join(folderName.split('/')[:-1]))
         status, result = self.session.create(self.toIMAP(folderName))
         # TODO Handle errors
         # Force new read of folders list
