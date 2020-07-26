@@ -14,7 +14,6 @@ class MaildirMailbox(Maildir):
     """ For Maildir, we use standard Maildir class from Python library"""
 
     def get_message(self, key):
-        print('MaildirMailbox.get_message')
         """ Overloading for context data"""
         message = Maildir.get_message(self, key)
         # TODO status
@@ -47,6 +46,9 @@ class MaildirMailStorage(AbstractMailStorage):
                 folder.endswith('/cur')
                 or folder.endswith('/new')
                 or folder.endswith('/tmp')
+                or folder == 'cur'
+                or folder == 'new'
+                or folder == 'tmp'
             )
         ]
         self.folders.sort()
@@ -57,18 +59,20 @@ class MaildirMailStorage(AbstractMailStorage):
         return self.folders
 
     def getFolderMailbox(self, folderName, create=True):
-        f = os.path.join(
+        localFolderName = os.path.join(
             self.properties["path"],
             os.path.join(*(folderName.split('/')))
         )
-        return MaildirMailbox(
-            os.path.join(
-                self.properties["path"],
-                os.path.join(*(folderName.split('/')))
-            ),
-            None,
-            True
-        )
+        # These folders don't always exist in imported mailboxes
+        for subdir in ('cur', 'new', 'tmp'):
+            mailsubdir = os.path.join(localFolderName, subdir)
+            if not os.path.isdir(mailsubdir):
+                try:
+                    os.mkdir(mailsubdir)
+                except Exception as e:
+                    raise IOError("Unable to create directory" + mailsubdir)
+
+        return MaildirMailbox(localFolderName, None, True)
 
     def createFolder(self, folderName, includingPath=True):
         folderpath = os.path.join(
