@@ -12,7 +12,8 @@ from project import project
 
 
 def show(text):
-    print text
+    print(text)
+    sys.stdout.flush()
 
 
 class MailToolboxRunner(object):
