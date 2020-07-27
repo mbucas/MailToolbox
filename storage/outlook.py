@@ -17,6 +17,7 @@ import pywintypes
 # required for dealing with attachment
 import tempfile
 
+from logtext import logtext
 from .abstractmailstorage import *
 
 # Constants for OutLook
@@ -149,7 +150,7 @@ class OutlookMailbox(Mailbox):
             .Items[key]
         )
         if outlookMessage.Class not in MailLikeClasses:
-            print(outlookMessage.Class)
+            logtext.logText(outlookMessage.Class)
             return None
 
         # Body

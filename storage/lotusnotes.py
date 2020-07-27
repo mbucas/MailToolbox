@@ -12,6 +12,7 @@ import win32com.client
 # required for dealing with attachment
 import tempfile
 
+from logtext import logtext
 from .abstractmailstorage import *
 
 
@@ -221,8 +222,8 @@ class LotusNotesMailbox(Mailbox):
         message.dump = dump
         # /Debug tools
         if message.invalidAttachment:
-            print("Attachment not found for mail")
-            print(message.dump)
+            logtext.logText("Attachment not found for mail")
+            logtext.logText(message.dump)
 
         return message
 

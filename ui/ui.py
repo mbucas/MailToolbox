@@ -11,13 +11,7 @@ from project import project
 from storage import storage
 from transformations import transformations
 from engine import engine
-
-
-def showText(text):
-    try:
-        print(text)
-    except UnicodeEncodeError:
-        print(text.encode('utf8'))
+from logtext import logtext
 
 
 class DataDelegate(QtWidgets.QItemDelegate):
@@ -456,10 +450,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def runProject(self):
         self.saveProject()
-        print("Starting")
-        runnerEngine = engine.Engine(self.currentProject, showText)
+        logtext.logText("Starting")
+        runnerEngine = engine.Engine(self.project, folderCallback=logtext.logText)
         runnerEngine.run()
-        print("Finished")
+        logtext.logText("Finished")
 
     def about(self, sender):
         box = QtWidgets.QMessageBox(

@@ -4,10 +4,12 @@
 from mailbox import Mailbox
 from email import message_from_string
 from email.message import Message
+from email.utils import parsedate
 import imaplib
 import re
 import time
 
+from logtext import logtext
 from .abstractmailstorage import *
 from . import imap_utf7
 
@@ -26,13 +28,23 @@ class ImapMailbox(Mailbox):
 
     def add(self, message):
         """Add message and return assigned key."""
-        self.mailStorage.session.append(
-            self.mailStorage.toIMAP(self.folder),
-            '',
-            # TODO Time should be from the original message
-            imaplib.Time2Internaldate(time.time()),
-            message.as_string().encode('utf-8')
-        )
+        try:
+            msg_date_str = message.get("date")
+            msg_date = parsedate(msg_date_str)
+        except Exception as e:
+            # Fallback to current time
+            logtext.logText(str(msg_date) + ' ' + str(e))
+            msg_date = time.time()
+        try:
+            self.mailStorage.session.append(
+                self.mailStorage.toIMAP(self.folder),
+                '',
+                imaplib.Time2Internaldate(msg_date),
+                message.as_string().encode('utf-8')
+            )
+        except imaplib.IMAP4.error as err:
+            # TODO Identify the mail that caused error
+            logtext.logText(str(err))
 
     def iterkeys(self):
         """Return an iterator over keys."""

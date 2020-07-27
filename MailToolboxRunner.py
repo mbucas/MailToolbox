@@ -3,17 +3,14 @@
 
 import sys
 import argparse
+from datetime import datetime
 
 from config import config
 from storage import storage
 from engine import engine
 from transformations import transformations
 from project import project
-
-
-def show(text):
-    print(text)
-    sys.stdout.flush()
+from logtext import logtext
 
 
 class MailToolboxRunner(object):
@@ -39,8 +36,10 @@ class MailToolboxRunner(object):
         return parser.parse_args()
 
     def main(self):
-        runnerEngine = engine.Engine(self.project, folderCallback=show)
+        logtext.logText("Starting")
+        runnerEngine = engine.Engine(self.project, folderCallback=logtext.logText)
         runnerEngine.run()
+        logtext.logText("Finished")
 
 
 if __name__ == "__main__":
