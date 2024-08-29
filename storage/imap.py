@@ -30,21 +30,24 @@ class ImapMailbox(Mailbox):
         """Add message and return assigned key."""
         try:
             msg_date_str = message.get("date")
-            msg_date = parsedate(msg_date_str)
+            msg_date_parsed = parsedate(msg_date_str)
+            msg_date = imaplib.Time2Internaldate(msg_date_parsed)
         except Exception as e:
-            # Fallback to current time
-            logtext.logText(str(msg_date) + ' ' + str(e))
-            msg_date = time.time()
+            # Fall back to current time
+            logtext.logText('"' + str(msg_date_str) + '" ' + str(e))
+            msg_date = imaplib.Time2Internaldate(time.time())
         try:
             self.mailStorage.session.append(
                 self.mailStorage.toIMAP(self.folder),
                 '',
-                imaplib.Time2Internaldate(msg_date),
+                msg_date,
                 message.as_string().encode('utf-8')
             )
         except imaplib.IMAP4.error as err:
             # TODO Identify the mail that caused error
             logtext.logText(str(err))
+        except Exception as e:
+            logtext.logText(str(e))
 
     def iterkeys(self):
         """Return an iterator over keys."""
@@ -108,30 +111,70 @@ class ImapMailStorage(AbstractMailStorage):
             self.properties['password']
         )
         self.folders = None
-        self.IMAPFolders = {}
+        self.localToIMAPFolders = {}
+        self.IMAPToLocalFolders = {}
+        self.IMAPDelimiter = '/'
+        self.localDelimiter = '/'
+        self.IMAPServerWithRoot = True
 
     def closeSession(self):
         self.session.logout()
 
     def fromIMAP(self, IMAPFolder):
-        # Remove quotes if present
+        if IMAPFolder in self.IMAPToLocalFolders:
+            return self.IMAPToLocalFolders[IMAPFolder]
+
+        # 1. Remove quotes if present
         # See https://stackoverflow.com/questions/25186394/
-        localFolder = imap_utf7.decode(IMAPFolder).strip('"')
-        self.IMAPFolders[localFolder] = IMAPFolder
+        IMAPFolderUnquoted = IMAPFolder.strip('"')
+
+        # 2. Convert to UTF8
+        # imap_utf7.decode expects bytes as input
+        IMAPFolderUTF8 = imap_utf7.decode(IMAPFolderUnquoted.encode('utf-8'))
+
+        # 3. Add leading delimiter if necessary
+        if IMAPFolderUTF8[0] != self.IMAPDelimiter:
+            self.IMAPServerWithRoot = False
+            IMAPFolderUTF8 = self.IMAPDelimiter + IMAPFolderUTF8
+
+        # 4. Convert localDelimiter to IMAPDelimiter
+        localFolder = self.localDelimiter.join(IMAPFolderUTF8.split(self.IMAPDelimiter))
+
+        # 5. Keep result in caches
+        self.localToIMAPFolders[localFolder] = IMAPFolder
+        self.IMAPToLocalFolders[IMAPFolder] = localFolder
+
         return localFolder
 
     def toIMAP(self, localFolder):
-        # Add quotes if white space in folder name
+        if localFolder in self.localToIMAPFolders:
+            return self.localToIMAPFolders[localFolder]
+
+        # Build IMAP folder from local name
+
+        # 1. Convert localDelimiter to IMAPDelimiter
+        localFolderIMAPDelimiter = self.IMAPDelimiter.join(localFolder.split(self.localDelimiter))
+
+        # 2. Remove leading delimiter if necessary
+        if not self.IMAPServerWithRoot:
+            if localFolderIMAPDelimiter[0] == self.IMAPDelimiter:
+                localFolderIMAPDelimiter = localFolderIMAPDelimiter[1:]
+
+        # 3. Convert to UTF7
+        IMAPFolderUTF7 = imap_utf7.encode(localFolderIMAPDelimiter)
+
+        # 4. Add double quotes if white space in folder name
         # See https://stackoverflow.com/questions/25186394/
-        if localFolder in self.IMAPFolders:
-            return self.IMAPFolders[localFolder]
+        if b" " in IMAPFolderUTF7:
+            IMAPFolder = b'"' + IMAPFolderUTF7 + b'"'
         else:
-            if ' ' in localFolder:
-                IMAPFolder = b'"' + imap_utf7.encode(localFolder) + b'"'
-            else:
-                IMAPFolder = imap_utf7.encode(localFolder)
-            self.IMAPFolders[localFolder] = IMAPFolder
-            return IMAPFolder
+            IMAPFolder = IMAPFolderUTF7
+
+        # 5. Keep result in caches
+        self.localToIMAPFolders[localFolder] = IMAPFolder
+        self.IMAPToLocalFolders[IMAPFolder] = localFolder
+
+        return IMAPFolder
 
     def readFolders(self):
         self.list_pattern = re.compile(
@@ -149,6 +192,7 @@ class ImapMailStorage(AbstractMailStorage):
                     .match(elem.decode('utf-8'))
                     .groups()
                 )
+                self.IMAPDelimiter = delimiter
                 folder = self.fromIMAP(folder_utf7)
                 # This folder makes imaplib complain, because
                 # it doesn't really exist
@@ -174,9 +218,12 @@ class ImapMailStorage(AbstractMailStorage):
         return ImapMailbox(self.properties['path'], folderName, self)
 
     def createFolder(self, folderName, includingPath=True):
+        print('createFolder', folderName, self.toIMAP(folderName))
         if includingPath:
-            if '/' in folderName:
-                self.createFolder('/'.join(folderName.split('/')[:-1]))
+            if self.localDelimiter in folderName:
+                parents = folderName.split(self.localDelimiter)[:-1]
+                if len(parents) > 1:
+                    self.createFolder(self.localDelimiter.join(parents))
         status, result = self.session.create(self.toIMAP(folderName))
         # TODO Handle errors
         # Force new read of folders list
@@ -190,8 +237,10 @@ class ImapMailStorage(AbstractMailStorage):
         self.readFolders()
 
     def hasFolder(self, folderName):
+        print('hasFolder', folderName)
         if not self.folders:
             self.readFolders()
+        print('hasFolder', self.folders)
         return folderName in self.folders
 
 
